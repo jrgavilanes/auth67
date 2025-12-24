@@ -318,4 +318,93 @@ public class AuthenticationIntegrationTest {
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isForbidden()); // LockedException handled by GlobalExceptionHandler
     }
+
+    @Test
+    public void shouldIncludeRolesInToken() throws Exception {
+        LoginRequest loginRequest = LoginRequest.builder()
+                .username("admin")
+                .password("admin123")
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String responseContent = result.getResponse().getContentAsString();
+        AuthenticationResponse response = objectMapper.readValue(responseContent, AuthenticationResponse.class);
+        String accessToken = response.getAccessToken();
+
+        // Verify claims manually
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        SecretKey key = Keys.hmacShaKeyFor(keyBytes);
+
+        io.jsonwebtoken.Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(accessToken)
+                .getPayload();
+
+        java.util.List<String> roles = claims.get("roles", java.util.List.class);
+        
+        // Assertions
+        if (roles == null || !roles.contains("ROLE_ADMIN")) {
+            throw new RuntimeException("Roles claim missing or incorrect: " + roles);
+        }
+    }
+
+    @Test
+    public void shouldAllowAccessToJoputaEndpoint() throws Exception {
+        String adminToken = getAdminToken();
+
+        // 1. Create User with ROLE_JOPUTA
+        Set<String> roles = new HashSet<>();
+        roles.add("ROLE_USER");
+        roles.add("ROLE_JOPUTA");
+
+        RegisterRequest registerRequest = RegisterRequest.builder()
+                .username("el_joputa")
+                .password("password123")
+                .roles(roles)
+                .build();
+
+        mockMvc.perform(post("/api/auth/register")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(registerRequest)))
+                .andExpect(status().isOk());
+
+        // 2. Login as ROLE_JOPUTA
+        LoginRequest loginRequest = LoginRequest.builder()
+                .username("el_joputa")
+                .password("password123")
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+        
+        String joputaToken = objectMapper.readValue(result.getResponse().getContentAsString(), AuthenticationResponse.class).getAccessToken();
+
+        // 3. Access the restricted endpoint
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/test/joputa")
+                .header("Authorization", "Bearer " + joputaToken))
+                .andExpect(status().isOk());
+
+        // 4. Verify regular user is denied
+        // (Create and Login regular user)
+        RegisterRequest regularReg = RegisterRequest.builder().username("regular_guy").password("pass").roles(Collections.singleton("ROLE_USER")).build();
+        mockMvc.perform(post("/api/auth/register").header("Authorization", "Bearer " + adminToken).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(regularReg)));
+        
+        LoginRequest regularLogin = LoginRequest.builder().username("regular_guy").password("pass").build();
+        MvcResult regularResult = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(regularLogin))).andReturn();
+        String regularToken = objectMapper.readValue(regularResult.getResponse().getContentAsString(), AuthenticationResponse.class).getAccessToken();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/test/joputa")
+                .header("Authorization", "Bearer " + regularToken))
+                .andExpect(status().isForbidden());
+    }
 }

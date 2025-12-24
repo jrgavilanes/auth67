@@ -26,7 +26,14 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(req ->
-                        req.requestMatchers("/api/auth/login").permitAll()
+                        req.requestMatchers(
+                                        "/api/auth/login",
+                                        "/",
+                                        "/index.html",
+                                        "/dashboard.html",
+                                        "/favicon.ico",
+                                        "/*.css", "/*.js" // In case we add local assets later
+                                ).permitAll()
                                 .requestMatchers("/api/auth/register").hasRole("ADMIN")
                                 .anyRequest()
                                 .authenticated()
