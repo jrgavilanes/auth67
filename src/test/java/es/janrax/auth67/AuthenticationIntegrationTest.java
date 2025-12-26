@@ -33,6 +33,9 @@ import java.util.Set;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+
+import es.janrax.auth67.service.AuthService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -53,6 +56,9 @@ public class AuthenticationIntegrationTest {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuthService authService;
 
     @Value("${application.security.jwt.secret-key}")
     private String secretKey;
@@ -355,56 +361,68 @@ public class AuthenticationIntegrationTest {
     }
 
     @Test
-    public void shouldAllowAccessToJoputaEndpoint() throws Exception {
-        String adminToken = getAdminToken();
-
-        // 1. Create User with ROLE_JOPUTA
+    public void shouldAllowAccessToSpecialEndpoint() throws Exception {
+        // 1. Create User with ROLE_SPECIAL_USER
         Set<String> roles = new HashSet<>();
         roles.add("ROLE_USER");
-        roles.add("ROLE_JOPUTA");
+        roles.add("ROLE_SPECIAL_USER");
 
         RegisterRequest registerRequest = RegisterRequest.builder()
-                .username("el_joputa")
-                .password("password123")
+                .username("el_special")
+                .password("password")
                 .roles(roles)
                 .build();
 
-        mockMvc.perform(post("/api/auth/register")
-                .header("Authorization", "Bearer " + adminToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(registerRequest)))
-                .andExpect(status().isOk());
+        authService.register(registerRequest);
 
-        // 2. Login as ROLE_JOPUTA
+        // 2. Login as ROLE_SPECIAL_USER
         LoginRequest loginRequest = LoginRequest.builder()
-                .username("el_joputa")
-                .password("password123")
+                .username("el_special")
+                .password("password")
                 .build();
 
         MvcResult result = mockMvc.perform(post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginRequest)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
                 .andReturn();
-        
-        String joputaToken = objectMapper.readValue(result.getResponse().getContentAsString(), AuthenticationResponse.class).getAccessToken();
 
-        // 3. Access the restricted endpoint
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/test/joputa")
-                .header("Authorization", "Bearer " + joputaToken))
-                .andExpect(status().isOk());
+        String specialToken = objectMapper.readValue(result.getResponse().getContentAsString(), AuthenticationResponse.class).getAccessToken();
 
-        // 4. Verify regular user is denied
-        // (Create and Login regular user)
-        RegisterRequest regularReg = RegisterRequest.builder().username("regular_guy").password("pass").roles(Collections.singleton("ROLE_USER")).build();
-        mockMvc.perform(post("/api/auth/register").header("Authorization", "Bearer " + adminToken).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(regularReg)));
-        
-        LoginRequest regularLogin = LoginRequest.builder().username("regular_guy").password("pass").build();
-        MvcResult regularResult = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(regularLogin))).andReturn();
-        String regularToken = objectMapper.readValue(regularResult.getResponse().getContentAsString(), AuthenticationResponse.class).getAccessToken();
+        // 3. Access Protected Endpoint
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/test/special")
+                        .header("Authorization", "Bearer " + specialToken))
+                .andExpect(status().isOk())
+                .andExpect(content().string("Bienvenido, usuario con rol SPECIAL_USER. Tienes acceso permitido."));
+    }
 
-        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/test/joputa")
-                .header("Authorization", "Bearer " + regularToken))
+    @Test
+    public void shouldDenyAccessToSpecialEndpointForNormalUser() throws Exception {
+        // 0. Register Normal User
+        RegisterRequest registerRequest = RegisterRequest.builder()
+                .username("testuser")
+                .password("password")
+                .roles(Collections.singleton("ROLE_USER"))
+                .build();
+        authService.register(registerRequest);
+
+        // 1. Login as Normal User
+        LoginRequest loginRequest = LoginRequest.builder()
+                .username("testuser")
+                .password("password")
+                .build();
+
+        MvcResult result = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String token = objectMapper.readValue(result.getResponse().getContentAsString(), AuthenticationResponse.class).getAccessToken();
+
+        // 2. Try to access Special Endpoint
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/test/special")
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
 }

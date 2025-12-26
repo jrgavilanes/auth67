@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/test")
 public class TestRoleController {
 
-    @GetMapping("/joputa")
-    @PreAuthorize("hasRole('JOPUTA')")
-    public ResponseEntity<String> onlyForJoputa() {
-        return ResponseEntity.ok("Bienvenido, usuario con rol JOPUTA. Tienes acceso permitido.");
+    @GetMapping("/special")
+    @PreAuthorize("hasRole('SPECIAL_USER')")
+    public ResponseEntity<String> onlyForSpecialUser() {
+        return ResponseEntity.ok("Bienvenido, usuario con rol SPECIAL_USER. Tienes acceso permitido.");
     }
 }
