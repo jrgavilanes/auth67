@@ -1,9 +1,9 @@
 package es.janrax.auth67;
 
-import es.janrax.auth67.model.Role;
-import es.janrax.auth67.model.User;
-import es.janrax.auth67.repository.RoleRepository;
-import es.janrax.auth67.repository.UserRepository;
+import es.janrax.auth67.shared.domain.Role;
+import es.janrax.auth67.shared.domain.User;
+import es.janrax.auth67.shared.repository.RoleRepository;
+import es.janrax.auth67.shared.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;

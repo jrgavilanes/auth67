@@ -1,14 +1,14 @@
 package es.janrax.auth67;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import es.janrax.auth67.dto.AuthenticationResponse;
-import es.janrax.auth67.dto.LoginRequest;
-import es.janrax.auth67.dto.RegisterRequest;
-import es.janrax.auth67.dto.UserUpdateRequest;
-import es.janrax.auth67.model.Role;
-import es.janrax.auth67.model.User;
-import es.janrax.auth67.repository.RoleRepository;
-import es.janrax.auth67.repository.UserRepository;
+import es.janrax.auth67.auth.dto.AuthenticationResponse;
+import es.janrax.auth67.auth.dto.LoginRequest;
+import es.janrax.auth67.auth.dto.RegisterRequest;
+import es.janrax.auth67.admin.dto.UserUpdateRequest;
+import es.janrax.auth67.shared.domain.Role;
+import es.janrax.auth67.shared.domain.User;
+import es.janrax.auth67.shared.repository.RoleRepository;
+import es.janrax.auth67.shared.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

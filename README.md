@@ -21,6 +21,30 @@
 
 ---
 
+## 📂 Project Architecture
+
+This project follows a **Screaming Architecture** approach, organizing code by **Features** rather than technical layers. This makes the codebase easier to navigate and scale.
+
+```text
+src/main/java/es/janrax/auth67/
+├── auth                  <-- Feature: Core Authentication
+│   ├── api               (AuthController)
+│   ├── service           (AuthService)
+│   ├── security          (JwtService, Config, Filters)
+│   └── dto               (LoginRequest, RegisterRequest...)
+├── admin                 <-- Feature: User Management
+│   ├── api               (UserController)
+│   ├── service           (UserService)
+│   └── dto               (UserResponse, UserUpdateRequest)
+└── shared                <-- Shared Kernel
+    ├── config            (Global Config)
+    ├── domain            (Entities: User, Role)
+    ├── repository        (Repositories: UserRepository...)
+    └── exception         (Global Error Handling)
+```
+
+---
+
 ## 🛠️ Technology Stack
 
 *   **Core:** Java 21, Spring Boot 3.5.9
