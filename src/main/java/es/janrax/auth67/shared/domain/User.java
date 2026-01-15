@@ -40,8 +40,10 @@ public class User implements UserDetails {
     )
     private Set<Role> roles;
 
-    @Builder.Default
-    private boolean locked = false;
+    private boolean locked;
+
+    @Column(length = 512) // Ensure enough space for the token
+    private String refreshToken;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
