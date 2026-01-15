@@ -28,6 +28,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(req ->
                         req.requestMatchers(
                                         "/api/auth/login",
+                                        "/api/auth/refresh-token",
                                         "/",
                                         "/index.html",
                                         "/dashboard.html",
